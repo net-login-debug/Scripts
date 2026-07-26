@@ -1,7 +1,6 @@
--- NetLogger.lua с GUI
+-- NetLogger.lua (фикс кнопок)
 local player = game.Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 -- ===== СОЗДАНИЕ GUI =====
@@ -58,6 +57,7 @@ closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
 closeBtn.TextSize = 18
 closeBtn.Font = Enum.Font.GothamBold
+
 closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
 end)
@@ -211,8 +211,24 @@ local function checkInternet()
     return success
 end
 
+-- ===== ФУНКЦИЯ ДЛЯ ОБРАБОТКИ КНОПОК (РАБОТАЕТ НА ЛЮБЫХ ИНЖЕКТОРАХ) =====
+local function setupButton(button, callback)
+    -- Основной метод
+    button.MouseButton1Click:Connect(callback)
+
+    -- Fallback для мобильных инжекторов
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            callback()
+        end
+    end)
+
+    -- Ещё один fallback
+    button.MouseButton1Down:Connect(callback)
+end
+
 -- ===== ОБРАБОТЧИКИ КНОПОК =====
-statusBtn.MouseButton1Click:Connect(function()
+setupButton(statusBtn, function()
     statusBtn.Text = "⏳ Проверка..."
     statusBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
     statusLabel.Text = "Проверка интернета..."
@@ -232,7 +248,7 @@ statusBtn.MouseButton1Click:Connect(function()
     statusBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
 end)
 
-sendBtn.MouseButton1Click:Connect(function()
+setupButton(sendBtn, function()
     sendBtn.Text = "⏳ Отправка..."
     sendBtn.BackgroundColor3 = Color3.fromRGB(30, 80, 130)
 
