@@ -1,6 +1,6 @@
 -- =====================================
--- ULTIMATE MEGA SUPREME v5.0
--- Для телефона. R15. Выбор цели. Эмоции.
+-- ULTIMATE SUPREME v6.1 (Mobile)
+-- JERK через инвентарь
 -- =====================================
 local player = game.Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
@@ -13,232 +13,75 @@ local ChatService = game:GetService("Chat")
 
 -- ===== CONFIG =====
 local WEBHOOK = "https://discord.com/api/webhooks/1530947322064928950/h3h94_tyIWNw8zq8PnPqjwyGYNhwv_tPe6VZvOntZGDAmrkhl22YkDtf7ZZtzUXYOWj1"
-local isFlying = false
-local isNoClip = false
-local isSpeed = false
-local isAntiKick = false
-local isAutoFarm = false
-local isEmoting = false
-local isJerking = false
-local selectedTarget = nil
-local bodyVelocity = nil
+
+-- ===== СОСТОЯНИЯ =====
+local states = {
+    fly = false,
+    noclip = false,
+    speed = false,
+    antikick = false,
+    infinitejump = false,
+    jerking = false,
+    autofarm = false,
+}
 local noclipParts = {}
-local jerkMotor = nil
-local emoteAnim = nil
+local bodyVelocity = nil
 
--- ===== GUI =====
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player:WaitForChild("PlayerGui")
-screenGui.ResetOnSpawn = false
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Parent = screenGui
-mainFrame.Size = UDim2.new(0, 430, 0, 650)
-mainFrame.Position = UDim2.new(0.5, -215, 0.5, -325)
-mainFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 20)
-mainFrame.BackgroundTransparency = 0.1
-mainFrame.BorderSizePixel = 0
-mainFrame.ClipsDescendants = true
-mainFrame.Active = true
-mainFrame.Draggable = true
-
-local corner = Instance.new("UICorner")
-corner.Parent = mainFrame
-corner.CornerRadius = UDim.new(0, 16)
-
-local glow = Instance.new("Frame")
-glow.Parent = mainFrame
-glow.Size = UDim2.new(1, 4, 1, 4)
-glow.Position = UDim2.new(0, -2, 0, -2)
-glow.BackgroundColor3 = Color3.fromRGB(255, 0, 200)
-glow.BackgroundTransparency = 0.7
-glow.BorderSizePixel = 0
-local glowCorner = Instance.new("UICorner")
-glowCorner.Parent = glow
-glowCorner.CornerRadius = UDim.new(0, 18)
-
-local titleBar = Instance.new("Frame")
-titleBar.Parent = mainFrame
-titleBar.Size = UDim2.new(1, 0, 0, 50)
-titleBar.BackgroundColor3 = Color3.fromRGB(20, 20, 45)
-titleBar.BackgroundTransparency = 0.2
-titleBar.BorderSizePixel = 0
-local titleCorner = Instance.new("UICorner")
-titleCorner.Parent = titleBar
-titleCorner.CornerRadius = UDim.new(0, 16)
-
-local title = Instance.new("TextLabel")
-title.Parent = titleBar
-title.Size = UDim2.new(1, -40, 1, 0)
-title.Position = UDim2.new(0, 20, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "🔥 SUPREME v5.0"
-title.TextColor3 = Color3.fromRGB(255, 0, 200)
-title.TextSize = 20
-title.Font = Enum.Font.GothamBold
-title.TextXAlignment = Enum.TextXAlignment.Left
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Parent = titleBar
-closeBtn.Size = UDim2.new(0, 35, 0, 35)
-closeBtn.Position = UDim2.new(1, -40, 0, 8)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Text = "✕"
-closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-closeBtn.TextSize = 20
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
-
-local content = Instance.new("ScrollingFrame")
-content.Parent = mainFrame
-content.Size = UDim2.new(1, -20, 1, -70)
-content.Position = UDim2.new(0, 10, 0, 60)
-content.BackgroundTransparency = 1
-content.ScrollBarThickness = 4
-content.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 200)
-
-local contentList = Instance.new("UIListLayout")
-contentList.Parent = content
-contentList.Padding = UDim.new(0, 6)
-
--- ===== ФУНКЦИЯ СОЗДАНИЯ КНОПОК =====
-local function createButton(parent, text, color, callback)
-    local btn = Instance.new("TextButton")
-    btn.Parent = parent
-    btn.Size = UDim2.new(1, -10, 0, 40)
-    btn.BackgroundColor3 = color
-    btn.BorderSizePixel = 0
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextSize = 15
-    btn.Font = Enum.Font.Gotham
-    btn.ClipsDescendants = true
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.Parent = btn
-    btnCorner.CornerRadius = UDim.new(0, 10)
-    
-    btn.MouseButton1Click:Connect(callback)
-    btn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch then
-            callback()
-        end
-    end)
-    return btn
-end
-
--- ============================================================
--- ===== ФУНКЦИИ =====
--- ============================================================
-
--- 1. Получить всех игроков
-local function getPlayersList()
-    local list = {}
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then table.insert(list, p) end
-    end
-    return list
-end
-
--- 2. Выбор цели
-local function selectTarget()
-    local targets = getPlayersList()
-    if #targets == 0 then
-        print("❌ Нет игроков для выбора")
-        return
-    end
-    local names = {}
-    for i, p in pairs(targets) do
-        table.insert(names, i .. ". " .. p.Name)
-    end
-    table.insert(names, "❌ Отмена")
-    local choice = playersChoice(names)
-    if choice and choice <= #targets then
-        selectedTarget = targets[choice]
-        print("✅ Выбран: " .. selectedTarget.Name)
-    else
-        selectedTarget = nil
-        print("❌ Выбор отменён")
-    end
-end
-
--- 3. FLING выбранного
-local function flingSelected()
-    if not selectedTarget then print("❌ Сначала выбери цель") return end
-    local root = selectedTarget.Character and selectedTarget.Character:FindFirstChild("HumanoidRootPart")
-    if not root then print("❌ Цель не в игре") return end
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-    bv.Velocity = Vector3.new(math.random(-500, 500), math.random(300, 800), math.random(-500, 500))
-    bv.Parent = root
-    task.wait(0.5)
-    bv:Destroy()
-    print("💥 " .. selectedTarget.Name .. " улетел!")
-end
-
--- 4. JERK OFF R15 (дрочка)
+-- ===== JERK OFF (через инвентарь) =====
 local function toggleJerk()
     local char = player.Character
     if not char then return end
-    local humanoid = char:FindFirstChild("Humanoid")
-    if not humanoid then return end
     
-    isJerking = not isJerking
+    -- Удаляем старый инструмент
+    local oldTool = player.Backpack:FindFirstChild("JerkOffTool")
+    if oldTool then oldTool:Destroy() end
     
-    if isJerking then
-        if humanoid.RigType == Enum.HumanoidRigType.R15 then
-            -- Анимация дрочки для R15
-            local anim = Instance.new("Animation")
-            anim.AnimationId = "rbxassetid://1234567890" -- замени на реальный ID анимации (или используй локальную)
-            local track = humanoid:LoadAnimation(anim)
-            track:Play()
-            track.Looped = true
-            jerkMotor = track
-            print("🍆 JERK ON (R15)")
-        else
-            print("❌ Только R15 поддерживает эту анимацию")
-            isJerking = false
-        end
+    states.jerking = not states.jerking
+    
+    if states.jerking then
+        local tool = Instance.new("Tool")
+        tool.Name = "JerkOffTool"
+        tool.RequiresHandle = false
+        tool.CanBeDropped = false
+        tool.Parent = player.Backpack
+        
+        local anim = Instance.new("Animation")
+        anim.AnimationId = "rbxassetid://507771808" -- Можешь заменить на любой другой ID
+        anim.Parent = tool
+        
+        local track = nil
+        tool.Equipped:Connect(function()
+            local hum = char:FindFirstChild("Humanoid")
+            if hum then
+                track = hum:LoadAnimation(anim)
+                track:Play()
+                track.Looped = true
+                tool:SetAttribute("Track", track)
+            end
+        end)
+        
+        tool.Unequipped:Connect(function()
+            local t = tool:GetAttribute("Track")
+            if t then t:Stop() end
+        end)
+        
+        char:FindFirstChild("Humanoid"):EquipTool(tool)
+        print("🍆 JERK ON (инструмент в инвентаре)")
     else
-        if jerkMotor then
-            jerkMotor:Stop()
-            jerkMotor = nil
-        end
+        local tool = player.Backpack:FindChild("JerkOffTool")
+        if tool then tool:Destroy() end
         print("🍆 JERK OFF")
     end
 end
 
--- 5. ЭМОЦИИ (работают через чат-команды)
-local function doEmote(emoteName)
-    local char = player.Character
-    if not char then return end
-    local humanoid = char:FindFirstChild("Humanoid")
-    if not humanoid then return end
-    
-    -- Попытка через Remote (если есть)
-    pcall(function()
-        local remote = ReplicatedStorage:FindFirstChild("EmoteRemote")
-        if remote then
-            remote:FireServer(emoteName)
-            print("🎭 Эмоция " .. emoteName .. " отправлена через Remote")
-            return
-        end
-    end)
-    
-    -- Попытка через чат (для серверов с /e)
-    pcall(function()
-        ChatService:Chat(char.Head, "/e " .. emoteName)
-        print("🎭 Эмоция " .. emoteName .. " отправлена в чат")
-    end)
-end
-
--- 6. ОСТАЛЬНЫЕ ФУНКЦИИ (летать, ноклип, и т.д.)
+-- ===== ОСТАЛЬНЫЕ ФУНКЦИИ =====
 local function toggleFly()
     local char = player.Character
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
-    isFlying = not isFlying
-    if isFlying then
+    states.fly = not states.fly
+    if states.fly then
         bodyVelocity = Instance.new("BodyVelocity")
         bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
         bodyVelocity.Velocity = Vector3.new(0, 50, 0)
@@ -251,8 +94,8 @@ local function toggleFly()
 end
 
 local function toggleNoClip()
-    isNoClip = not isNoClip
-    if isNoClip then
+    states.noclip = not states.noclip
+    if states.noclip then
         for _, part in pairs(player.Character:GetDescendants()) do
             if part:IsA("BasePart") then part.CanCollide = false table.insert(noclipParts, part) end
         end
@@ -265,18 +108,18 @@ local function toggleNoClip()
 end
 
 local function toggleSpeed()
-    isSpeed = not isSpeed
+    states.speed = not states.speed
     local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
     if humanoid then
-        humanoid.WalkSpeed = isSpeed and 120 or 16
-        humanoid.JumpPower = isSpeed and 120 or 50
-        print(isSpeed and "⚡ Speed ON" or "⚡ Speed OFF")
+        humanoid.WalkSpeed = states.speed and 120 or 16
+        humanoid.JumpPower = states.speed and 120 or 50
+        print(states.speed and "⚡ Speed ON" or "⚡ Speed OFF")
     end
 end
 
 local function toggleAntiKick()
-    isAntiKick = not isAntiKick
-    if isAntiKick then
+    states.antikick = not states.antikick
+    if states.antikick then
         game:GetService("Players").LocalPlayer.Kick = function() end
         print("🛡️ Anti-Kick ON")
     else
@@ -366,7 +209,10 @@ local function crashServer()
 end
 
 local function teleportToRandom()
-    local targets = getPlayersList()
+    local targets = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player then table.insert(targets, p) end
+    end
     if #targets == 0 then print("❌ Нет игроков") return end
     local target = targets[math.random(1, #targets)]
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
@@ -376,10 +222,10 @@ local function teleportToRandom()
 end
 
 local function toggleAutoFarm()
-    isAutoFarm = not isAutoFarm
-    if isAutoFarm then
+    states.autofarm = not states.autofarm
+    if states.autofarm then
         print("🌾 AutoFarm ON")
-        while isAutoFarm do
+        while states.autofarm do
             for _, v in pairs(workspace:GetDescendants()) do
                 if v:IsA("Tool") or (v:IsA("Part") and (v.Name:lower():find("coin") or v.Name:lower():find("gem") or v.Name:lower():find("diamond"))) then
                     player.Character.HumanoidRootPart.CFrame = v.CFrame
@@ -394,32 +240,133 @@ local function toggleAutoFarm()
 end
 
 -- ============================================================
--- ===== СОЗДАНИЕ КНОПОК =====
+-- ===== GUI =====
 -- ============================================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
 
-createButton(content, "🎯 ВЫБРАТЬ ЦЕЛЬ", Color3.fromRGB(180, 0, 200), selectTarget)
-createButton(content, "💥 FLING ВЫБРАННОГО", Color3.fromRGB(200, 50, 100), flingSelected)
-createButton(content, "🍆 JERK OFF (R15)", Color3.fromRGB(255, 50, 150), toggleJerk)
-createButton(content, "🎭 ЭМОЦИЯ /e laugh", Color3.fromRGB(150, 100, 50), function() doEmote("laugh") end)
-createButton(content, "🎭 ЭМОЦИЯ /e dance", Color3.fromRGB(150, 100, 50), function() doEmote("dance") end)
-createButton(content, "🎭 ЭМОЦИЯ /e wave", Color3.fromRGB(150, 100, 50), function() doEmote("wave") end)
-createButton(content, "🎭 ЭМОЦИЯ /e point", Color3.fromRGB(150, 100, 50), function() doEmote("point") end)
-createButton(content, "🛫 FLY / STOP", Color3.fromRGB(30, 80, 180), toggleFly)
+local mainFrame = Instance.new("Frame")
+mainFrame.Parent = screenGui
+mainFrame.Size = UDim2.new(0, 420, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -210, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(10, 5, 18)
+mainFrame.BackgroundTransparency = 0.05
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+local corner = Instance.new("UICorner")
+corner.Parent = mainFrame
+corner.CornerRadius = UDim.new(0, 16)
+
+local glow = Instance.new("Frame")
+glow.Parent = mainFrame
+glow.Size = UDim2.new(1, 6, 1, 6)
+glow.Position = UDim2.new(0, -3, 0, -3)
+glow.BackgroundColor3 = Color3.fromRGB(150, 0, 255)
+glow.BackgroundTransparency = 0.8
+glow.BorderSizePixel = 0
+local glowCorner = Instance.new("UICorner")
+glowCorner.Parent = glow
+glowCorner.CornerRadius = UDim.new(0, 18)
+
+local titleBar = Instance.new("Frame")
+titleBar.Parent = mainFrame
+titleBar.Size = UDim2.new(1, 0, 0, 45)
+titleBar.BackgroundColor3 = Color3.fromRGB(20, 10, 35)
+titleBar.BackgroundTransparency = 0.2
+titleBar.BorderSizePixel = 0
+local titleCorner = Instance.new("UICorner")
+titleCorner.Parent = titleBar
+titleCorner.CornerRadius = UDim.new(0, 16)
+
+local title = Instance.new("TextLabel")
+title.Parent = titleBar
+title.Size = UDim2.new(1, -40, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "✦ SUPREME v6.1 ✦"
+title.TextColor3 = Color3.fromRGB(180, 100, 255)
+title.TextSize = 18
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Parent = titleBar
+closeBtn.Size = UDim2.new(0, 35, 0, 35)
+closeBtn.Position = UDim2.new(1, -40, 0, 5)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+closeBtn.TextSize = 20
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+
+local content = Instance.new("ScrollingFrame")
+content.Parent = mainFrame
+content.Size = UDim2.new(1, -20, 1, -60)
+content.Position = UDim2.new(0, 10, 0, 55)
+content.BackgroundTransparency = 1
+content.ScrollBarThickness = 4
+content.ScrollBarImageColor3 = Color3.fromRGB(150, 0, 255)
+
+local contentList = Instance.new("UIListLayout")
+contentList.Parent = content
+contentList.Padding = UDim.new(0, 5)
+
+-- ===== КНОПКИ =====
+local function createButton(parent, text, color, callback)
+    local btn = Instance.new("TextButton")
+    btn.Parent = parent
+    btn.Size = UDim2.new(1, -10, 0, 40)
+    btn.BackgroundColor3 = color
+    btn.BackgroundTransparency = 0.2
+    btn.BorderSizePixel = 0
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 15
+    btn.Font = Enum.Font.Gotham
+    btn.ClipsDescendants = true
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.Parent = btn
+    btnCorner.CornerRadius = UDim.new(0, 10)
+    
+    btn.MouseButton1Click:Connect(callback)
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then callback() end
+    end)
+    return btn
+end
+
+-- ===== БЛОКИ =====
+-- FLY
+createButton(content, "🛫 FLY", Color3.fromRGB(30, 80, 180), toggleFly)
 createButton(content, "🌀 NOCLIP", Color3.fromRGB(60, 60, 180), toggleNoClip)
 createButton(content, "⚡ SPEED (x8)", Color3.fromRGB(200, 150, 50), toggleSpeed)
-createButton(content, "🛡️ ANTI-KICK", Color3.fromRGB(50, 150, 50), toggleAntiKick)
-createButton(content, "🦘 INFINITE JUMP", Color3.fromRGB(50, 180, 120), toggleInfiniteJump)
+
+-- PLAYER
 createButton(content, "💥 FLING ALL", Color3.fromRGB(200, 50, 50), flingAll)
 createButton(content, "👢 KICK ALL", Color3.fromRGB(220, 30, 30), kickAll)
-createButton(content, "📤 SEND TO DISCORD", Color3.fromRGB(40, 100, 200), sendDiscord)
+createButton(content, "🌀 TELEPORT TO RANDOM", Color3.fromRGB(100, 60, 200), teleportToRandom)
+
+-- ANIMATIONS
+createButton(content, "🍆 JERK OFF (инвентарь)", Color3.fromRGB(255, 50, 150), toggleJerk)
+
+-- TROLL
 createButton(content, "🎭 SPAWN TROLLS", Color3.fromRGB(200, 150, 30), spawnTroll)
 createButton(content, "💀 CRASH SERVER", Color3.fromRGB(200, 20, 20), crashServer)
-createButton(content, "🌀 TELEPORT TO RANDOM", Color3.fromRGB(100, 60, 200), teleportToRandom)
+
+-- MISC
+createButton(content, "🛡️ ANTI-KICK", Color3.fromRGB(50, 150, 50), toggleAntiKick)
+createButton(content, "🦘 INFINITE JUMP", Color3.fromRGB(50, 180, 120), toggleInfiniteJump)
 createButton(content, "🌾 AUTO FARM", Color3.fromRGB(0, 200, 100), toggleAutoFarm)
+createButton(content, "📤 SEND TO DISCORD", Color3.fromRGB(40, 100, 200), sendDiscord)
 
 -- ===== FLY CONTROL =====
 RunService.RenderStepped:Connect(function()
-    if isFlying and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+    if states.fly and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         local root = player.Character.HumanoidRootPart
         if bodyVelocity then
             local move = Vector3.new(0, 0, 0)
@@ -434,21 +381,16 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Noclip update
 RunService.RenderStepped:Connect(function()
-    if isNoClip and player.Character then
+    if states.noclip and player.Character then
         for _, part in pairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
 end)
 
--- ===== ПОЯВЛЕНИЕ =====
-mainFrame.Position = UDim2.new(0.5, -215, -0.5, -325)
-TweenService:Create(mainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -215, 0.5, -325)}):Play()
+mainFrame.Position = UDim2.new(0.5, -210, -0.5, -250)
+TweenService:Create(mainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Position = UDim2.new(0.5, -210, 0.5, -250)}):Play()
 
-print("🔥 SUPREME v5.0 LOADED!")
-print("👤 Игрок: " .. player.Name)
-print("📦 Выбирай цель, флинг, эмоции и дрочка!")
+print("✦ SUPREME v6.1 LOADED! ✦")
+print("🍆 JERK работает через инвентарь!")
